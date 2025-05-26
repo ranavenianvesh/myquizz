@@ -611,85 +611,18 @@ function updateGlobalTimerDisplay() {
   document.getElementById("globalTime").textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
 }
 
-let cheatingDetected = false;
-
-function showCheatingWarning() {
-  if (!document.getElementById('cheatingWarning')) {
-    const div = document.createElement('div');
-    div.id = 'cheatingWarning';
-    div.style.position = 'fixed';
-    div.style.top = '0';
-    div.style.width = '100%';
-    div.style.backgroundColor = '#d32f2f';
-    div.style.color = 'white';
-    div.style.textAlign = 'center';
-    div.style.padding = '10px';
-    div.style.fontWeight = 'bold';
-    div.style.zIndex = '9999';
-    div.textContent = "Warning: Switching apps or tabs is not allowed!";
-    document.body.appendChild(div);
-  }
-}
-
-function markCheating() {
-  cheatingDetected = true;
-  localStorage.setItem('cheated', 'true');
-  console.warn('User flagged as cheating!');
-}
-
-function endQuizDueToCheating() {
-  clearInterval(globalTimerInterval);
-  clearInterval(questionTimer);
-  alert("Quiz ended due to cheating.");
-  togglePage('summary');
-  document.getElementById("summary").innerHTML = `<p>Your score: ${score} out of ${quizData.length}</p>`;
-  document.getElementById("feedback").textContent = "Quiz ended due to cheating.";
-  // Additional cleanup or logging
-}
-
-function handleCheatDetected() {
-  if (!cheatingDetected) {
-    markCheating();
-    showCheatingWarning();
-    endQuizDueToCheating();
-  }
-}
-
-// Listen for visibility changes (desktop + mobile)
+// Cheat detection: If user switches tabs, logout and end quiz if quiz is running
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    handleCheatDetected();
+    // Only act if quiz page is visible (quiz running) and user logged in
+    if (!document.getElementById('quizPage').classList.contains('hidden') && currentUser) {
+      alert("Switching tabs is not allowed. You will be logged out and quiz ended.");
+      currentUser = "guest";
+      endQuiz();
+    }
   }
 });
 
-// Listen for pagehide (mobile app switch)
-window.addEventListener('pagehide', () => {
-  handleCheatDetected();
-});
-
-// Listen for blur (may catch app switches)
-window.addEventListener('blur', () => {
-  handleCheatDetected();
-});
-
-// Fallback interval check to detect if user is away for > 2 seconds
-let lastFocusTime = Date.now();
-window.addEventListener('focus', () => {
-  lastFocusTime = Date.now();
-});
-setInterval(() => {
-  if (document.hidden || (Date.now() - lastFocusTime > 2000)) {
-    handleCheatDetected();
-  }
-}, 1000);
-
-// On page load, check if already cheated before
-window.onload = () => {
-  if (localStorage.getItem('cheated') === 'true') {
-    alert("You were flagged for cheating in a previous quiz session.");
-    togglePage('login');  // Or lock quiz access
-  }
-};
 // Sample quiz data
 const allQuizzes = {
   sports: [
